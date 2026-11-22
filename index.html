@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Planta virtual de pasteurización HTST con simulación térmica y evaluación económica.">
-  <title>Planta virtual HTST · Operaciones unitarias</title>
+  <title>HTST EnergyLab 3D · Operaciones unitarias</title>
   <link rel="stylesheet" href="./styles.css">
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
@@ -13,7 +13,7 @@
   <script type="module" src="./app.mjs"></script>
 </head>
 <body>
-  <header class="top"><a class="brand" href="#inicio"><span>◈</span> PLANTA HTST</a><nav aria-label="Secciones"><a href="#planta">Planta</a><a href="#simulador">Simulador</a><a href="#graficos">Análisis</a><a href="#metodo">Metodología</a></nav></header>
+  <header class="top"><a class="brand" href="#inicio"><span>◈</span> HTST ENERGYLAB 3D</a><nav aria-label="Secciones"><a href="#planta">Planta</a><a href="#simulador">Simulador</a><a href="#laboratorio">Laboratorio OPU</a><a href="#graficos">Análisis</a><a href="#auditoria">Auditoría</a></nav></header>
   <main id="inicio">
     <div class="intro"><p class="eyebrow">OPERACIONES Y PROCESOS UNITARIOS</p><h1>Planta virtual de<br>pasteurización HTST</h1><p>Explora cómo un intercambiador de placas recupera calor de la leche pasteurizada y reduce el consumo de la planta.</p></div>
     <div id="metrics" class="metrics" aria-label="Indicadores principales"></div>
@@ -39,7 +39,7 @@
       <p>El problema es la demanda simultánea de calor y refrigeración. El objetivo es estimar cómo disminuyen ambas al transferir energía entre las dos corrientes de leche separadas por placas.</p>
       <dl class="formulas">
         <dt>Balance de materia y energía</dt><dd>ṁ = ρV̇. C = ṁ cₚ. Q total = C(T HTST − T entrada). Q recuperado = εQ total. El calentador aporta la diferencia. El enfriador retira C(T lado caliente − T final), con un mínimo de cero.</dd>
-        <dt>Intercambiador en contracorriente</dt><dd>Con caudales y propiedades iguales, ε = NTU/(1 + NTU) y NTU = UA/C, usando U y C en unidades coherentes. En diseño, A = Cε/[U(1 − ε)]. Se supone estado estacionario, U constante y pérdidas de calor despreciables.</dd>
+        <dt>Intercambiador en contracorriente</dt><dd>Con caudales y propiedades iguales, ε = NTU/(1 + NTU) y NTU = UA/C, usando U y C en unidades coherentes. En diseño, A = Cε/[U(1 − ε)]. Se supone estado estacionario, U uniforme en cada escenario y pérdidas de calor despreciables. Con ensuciamiento, 1/U efectivo = 1/U limpio + R adicional.</dd>
         <dt>Bombeo y retención</dt><dd>P = V̇ΔP/η. Las pérdidas de presión son entradas independientes. La residencia nominal es volumen útil dividido por caudal. La válvula retorna al tanque cuando el modelo marca menos de 72 °C o 15 s, o al activar el desvío manual.</dd>
         <dt>Costos y emisiones</dt><dd>Gas anual = carga térmica × horas / rendimiento del generador. Electricidad anual = (enfriamiento × fracción frigorífica / COP + bombeo) × horas. El informe calcula el bombeo incremental de la regeneración. Introduce la caída base si la conoces. Ahorro neto = ahorro de gas + ahorro eléctrico − mantenimiento incremental. ROI anual = ahorro neto / inversión. Retorno simple = 12 × inversión / ahorro neto. Las emisiones usan factores editables por kWh comprado.</dd>
       </dl>
