@@ -1,17 +1,47 @@
-# Planta virtual de pasteurización HTST
+# HTST EnergyLab 3D
 
-Proyecto final de Operaciones y Procesos Unitarios. Simulador académico del proceso, dimensionamiento térmico del regenerador de placas y comparación económica y ambiental con una línea convencional.
+Laboratorio virtual de pasteurización de leche para el proyecto final de **Operaciones y Procesos Unitarios** de la UPCH. Permite dimensionar un intercambiador de placas y comparar una línea convencional con una línea con recuperación de calor.
+
+**[Abrir el simulador en GitHub Pages](https://amadorjara-alt.github.io/HTS_TENERGYLAB3D/)**
+
+## Guía de uso
+
+1. En **Planta**, pulsa **Iniciar simulación**. Arrastra para girar la maqueta y usa la rueda o el gesto de pellizcar para acercarte.
+2. Selecciona un equipo en la maqueta o en **Inspeccionar equipo** para ver sus datos. En **Con regeneración**, pulsa **Separar placas** para explorar los canales. Usa **Forzar desvío** para observar el retorno al tanque.
+3. En **Simulador**, ajusta el caudal, las temperaturas y las propiedades de la leche. Usa **Efectividad objetivo** para calcular el área necesaria o **Área fija** para calcular la efectividad alcanzable. Los resultados se actualizan al editar.
+4. En **Laboratorio OPU**, modifica el coeficiente U con área fija. Compara DMLT con NTU y explora el ensuciamiento, la hidráulica y la refrigeración.
+5. En **Análisis**, compara energía, costos y emisiones. Usa **Exportar CSV** en el simulador o **Descargar auditoría JSON** en **Auditoría** para guardar resultados y parámetros.
+
+## Ejemplo para la sustentación
+
+1. Pulsa **Reiniciar**. El caso base parte de **5 000 L/h**, leche a **4 °C**, consigna de **72 °C** y regeneración del **85 %**.
+2. Selecciona **90 %** en el simulador y compara los resultados.
+
+| Indicador | 85 % | 90 % |
+| --- | ---: | ---: |
+| Temperatura después del precalentamiento | 61,8 °C | 65,2 °C |
+| Calor recuperado | 325,78 kW | 344,95 kW |
+| Calentamiento externo restante | 57,49 kW | 38,33 kW |
+| Área estimada del regenerador | 12,78 m² | 20,29 m² |
+
+3. Reinicia, elige **Área fija**, cambia el caudal a **6 000 L/h** e inicia la simulación. La residencia nominal baja a **12,5 s** y se activa el desvío automático al tanque.
 
 ## Ejecutar en local
 
-Sirve esta carpeta por HTTP. Por ejemplo, con Python ejecuta `python -m http.server 8000` y abre `http://localhost:8000`. El modelo 3D requiere WebGL y las bibliotecas Three.js y Chart.js se cargan desde un CDN. El recorrido, las fichas y las tablas funcionan aunque estas bibliotecas no se carguen.
+Clona o descarga el repositorio. Desde su carpeta raíz, ejecuta el siguiente comando y abre [localhost:8000](http://localhost:8000).
 
-## GitHub Pages
+```bash
+python -m http.server 8000
+```
 
-En **Settings → Pages**, elige **Deploy from a branch**, rama **main** y carpeta **/(root)**.
+La maqueta requiere WebGL. Three.js y Chart.js se cargan desde un CDN. El recorrido, las fichas y las tablas se pueden consultar si esas bibliotecas no cargan.
 
-## Modelo académico
+Para ejecutar las pruebas con Node.js:
 
-La configuración inicial emplea 5 000 L/h, 4 °C a la entrada, 72 °C de consigna y 85 % de efectividad. Las propiedades y los parámetros económicos, hidráulicos y ambientales son editables. La sección Metodología contiene las fórmulas, supuestos y bibliografía.
+```bash
+node --test engineering.test.mjs
+```
 
-La geometría 3D se construye con Three.js. El recorrido animado es una demostración educativa y la retención calculada es nominal.
+## Alcance del modelo
+
+Los balances se calculan en régimen estacionario. El arranque, la animación del flujo y la limpieza CIP son demostraciones educativas. La retención calculada es nominal y requiere validación sanitaria en planta. Consulta el [anexo técnico](ANEXO.md) para revisar las ecuaciones, los supuestos y las fuentes.
