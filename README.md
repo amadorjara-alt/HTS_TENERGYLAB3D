@@ -2,7 +2,7 @@
 
 Laboratorio virtual de pasteurización de leche para el proyecto final de **Operaciones y Procesos Unitarios** de la UPCH. Permite dimensionar un intercambiador de placas y comparar una línea convencional con una línea con recuperación de calor.
 
-**[Abrir el simulador en GitHub Pages](https://amadorjara-alt.github.io/HTS_TENERGYLAB3D/)**
+**[Abrir el simulador en GitHub Pages](https://amadorjara-alt.github.io/HTS_TENERGYLAB_3D/)**
 
 ## Guía de uso
 
