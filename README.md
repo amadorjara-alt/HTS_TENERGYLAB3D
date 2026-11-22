@@ -26,21 +26,6 @@ Laboratorio virtual de pasteurización de leche para el proyecto final de **Oper
 
 3. Reinicia, elige **Área fija**, cambia el caudal a **6 000 L/h** e inicia la simulación. La residencia nominal baja a **12,5 s** y se activa el desvío automático al tanque.
 
-## Ejecutar en local
-
-Clona o descarga el repositorio. Desde su carpeta raíz, ejecuta el siguiente comando y abre [localhost:8000](http://localhost:8000).
-
-```bash
-python -m http.server 8000
-```
-
-La maqueta requiere WebGL. Three.js y Chart.js se cargan desde un CDN. El recorrido, las fichas y las tablas se pueden consultar si esas bibliotecas no cargan.
-
-Para ejecutar las pruebas con Node.js:
-
-```bash
-node --test engineering.test.mjs
-```
 
 ## Alcance del modelo
 
