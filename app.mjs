@@ -1,4 +1,5 @@
 import { calculate } from './model.mjs';
+import { mountLab } from './lab.mjs';
 
 const by = id => document.getElementById(id);
 const form = by('inputs');
@@ -13,8 +14,9 @@ const fields = [
   ['area','Área instalada (m²)',12.78,.01],
   ['cp','Calor específico (kJ/kg·K)',3.94,.01],
   ['density','Densidad (kg/m³)',1030,1],
-  ['u','Coeficiente U (W/m²·K)',2500,1],
+  ['u','Coeficiente U limpio (W/m²·K)',2500,1],
   ['volume','Volumen de retención (L)',20.833333333333332,.01],
+  ['fouling','Resistencia adicional (10⁻⁴ m²·K/W)',0,0,100],
   ['pressure','Caída de presión base (kPa)',0,0],
   ['extraPressure','Caída adicional (kPa)',100,0],
   ['pumpEff','Rendimiento conjunto bomba y motor (%)',54,1,100],
@@ -30,7 +32,7 @@ const fields = [
   ['gridCO2','Factor eléctrico (kg CO₂/kWh)',0,0],
 ];
 for (const [index, [key, label, value, min, max]] of fields.entries()) {
-  by(index < 10 ? 'process-fields' : 'utility-fields').insertAdjacentHTML('beforeend',
+  by(index < 11 ? 'process-fields' : 'utility-fields').insertAdjacentHTML('beforeend',
     '<label>' + label + '<input required type="number" step="any" name="' + key +
     '" min="' + min + '" value="' + value + '"' + (max == null ? '' : ' max="' + max + '"') + '></label>');
 }
@@ -52,8 +54,10 @@ let forced = false;
 let exploded = false;
 const base = () => by('config').value === 'base';
 const diversion = () => forced || r.diverted;
-const select = key => {
+let selectedComponent;
+const select = (key,component) => {
   by('equipment').value = key;
+  selectedComponent = component;
   renderEquipment();
 };
 
@@ -64,7 +68,7 @@ function renderEquipment() {
   const points = {
     tank: [['Salida',temp(p.inlet)]],
     pump: [['Potencia eléctrica',format(r.pump + (base() ? 0 : r.extraPump)) + ' kW']],
-    regen: base() ? [['Configuración','En bypass']] : [['Lado frío',temp(p.inlet) + ' → ' + temp(r.preheat)],['Lado caliente' + nominal,temp(p.hot) + ' → ' + temp(r.warm)],['Recuperación nominal',format(r.recovered) + ' kW'],['Área efectiva',format(r.area) + ' m²'],['Coeficiente U',format(p.u) + ' W/m²·K']],
+    regen: base() ? [['Configuración','En bypass']] : [['Lado frío',temp(p.inlet) + ' → ' + temp(r.preheat)],['Lado caliente' + nominal,temp(p.hot) + ' → ' + temp(r.warm)],['Recuperación nominal',format(r.recovered) + ' kW'],['Área efectiva',format(r.area) + ' m²'],['Coeficiente U efectivo',format(r.effectiveU) + ' W/m²·K'],['Caída adicional supuesta',format(p.extraPressure) + ' kPa']],
     heater: [['Entrada nominal',temp(base() ? p.inlet : r.preheat)],['Salida',temp(p.hot)],['Potencia térmica nominal',format(base() ? r.total : r.heat) + ' kW']],
     hold: [['Temperatura',temp(p.hot)],['Residencia nominal',format(r.retention) + ' s']],
     valve: [['Temperatura',temp(p.hot)],['Destino',diversion() ? 'Retorno al tanque' : 'Enfriamiento y almacenamiento']],
@@ -75,7 +79,9 @@ function renderEquipment() {
   const downstream = key === 'cooler' || key === 'storage';
   const flow = bypassed || (downstream && diversion()) ? 0 : p.flow;
   const values = [['Caudal de la ruta',format(flow) + ' L/h'], ...points[key]];
-  by('equipment-data').innerHTML = '<h3>' + name + '</h3><p>' + description + '</p><dl>' +
+  const component = key === 'regen' ? lab.component(selectedComponent) : null;
+  by('equipment-data').innerHTML = '<h3>' + name + '</h3><p>' + description + '</p>' +
+    (component ? '<p><strong>Pieza seleccionada</strong> · ' + component + '</p>' : '') + '<dl>' +
     values.map(([a,b]) => '<dt>' + a + '</dt><dd>' + b + '</dd>').join('') + '</dl>';
 }
 
@@ -109,6 +115,7 @@ function renderPlant() {
   ].map(([label,n,unit]) => '<article><small>' + label + '</small><b>' + n + '</b><small>' + unit + '</small></article>').join('');
   renderEquipment();
   scene?.update({ running, conventional, diverted, exploded, points, flow:p.flow });
+  lab?.operation({ running, diverted, conventional, temperature:p.hot, retention:r.retention });
 }
 
 function table(id, headers, data) {
@@ -175,14 +182,18 @@ function refresh() {
   const mode = field('mode').value;
   field('eff').disabled = mode === 'area';
   field('area').disabled = mode === 'design';
+  field('pressure').disabled = lab.pressureLinked();
   for (const button of by('presets').children) button.setAttribute('aria-pressed', mode === 'design' && Number(button.dataset.eff) === field('eff').valueAsNumber);
   const next = Object.fromEntries(fields.map(([key]) => [key,field(key).valueAsNumber]));
   next.mode = mode;
   const valid = [...form.elements].every(input => input.validity.valid);
   const temperatureOK = next.hot > Math.max(next.inlet,next.outlet);
   by('error').textContent = !valid ? 'Revisa los valores y límites del formulario.' : !temperatureOK ? 'La temperatura HTST debe superar las temperaturas de entrada y salida.' : '';
-  if (!valid || !temperatureOK) {
+  const hydraulicOK = valid && temperatureOK && lab.adjust(next);
+  if (!valid || !temperatureOK || !hydraulicOK) {
+    if (valid && temperatureOK) by('error').textContent = 'La caída base vinculada requiere geometría válida y un régimen fuera de transición.';
     by('csv').disabled = true;
+    lab.invalidate();
     return;
   }
   by('csv').disabled = false;
@@ -190,6 +201,7 @@ function refresh() {
   r = calculate(p);
   renderPlant();
   renderAnalysis();
+  lab?.update(p,r);
 }
 for (const eff of [80,85,90]) {
   const button = document.createElement('button');
@@ -201,7 +213,7 @@ for (const eff of [80,85,90]) {
 }
 form.addEventListener('input',refresh);
 form.addEventListener('submit',event => { event.preventDefault(); refresh(); });
-by('equipment').onchange = renderEquipment;
+by('equipment').onchange = () => select(by('equipment').value);
 by('route').onclick = event => { if (event.target.dataset.equipment) select(event.target.dataset.equipment); };
 by('config').onchange = () => { exploded = false; renderPlant(); };
 by('run').onclick = () => { running = !running; renderPlant(); };
@@ -210,14 +222,16 @@ by('camera').onclick = () => scene.home();
 by('explode').onclick = () => { exploded = !exploded; if (exploded) select('regen'); renderPlant(); };
 by('reset').onclick = () => {
   form.reset();
+  lab.unlinkPressure();
   running = forced = exploded = false;
   by('config').value = 'regen';
   by('equipment').value = 'tank';
+  selectedComponent = undefined;
   scene?.home();
   refresh();
 };
 by('csv').onclick = () => {
-  const data = [['Parámetro','Valor'],...fields.filter(([key]) => !field(key).disabled).map(([key,label]) => [label,p[key]]),['Modo',p.mode],
+  const data = [['Parámetro','Valor'],...fields.filter(([key]) => key==='pressure' || !field(key).disabled).map(([key,label]) => [label,p[key]]),['Modo',p.mode],
     [],['Indicador','Convencional','Con regeneración'],...rows,[],['Indicador','80 %','85 %','90 %'],...scenarios];
   const quote = value => '"' + String(value ?? '').replaceAll('"','""') + '"';
   const url = URL.createObjectURL(new Blob(['\uFEFF',data.map(row => row.map(quote).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
@@ -227,6 +241,13 @@ by('csv').onclick = () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url),1000);
 };
+const lab = mountLab({
+  refresh,
+  setInputs(entries) {
+    for (const [key,value] of Object.entries(entries)) field(key).value = value;
+    refresh();
+  },
+});
 refresh();
 import('./plant.mjs').then(({ createPlant }) => {
   scene = createPlant(by('viewport'),select);
