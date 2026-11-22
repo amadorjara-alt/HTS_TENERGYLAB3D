@@ -89,24 +89,39 @@ export function createPlant(host, select) {
   function endPlate(x, offset) {
     const plate = new T.Group();
     regen.add(plate);
-    box(plate,[.19,2.25,1.75],teal,0,1.46,0);
+    box(plate,[.19,2.25,1.75],teal,0,1.46,0).userData.component = 'frame';
     for (const y of [.9,1.95]) for (const z of [-.58,.58]) {
-      cylinder(plate,.19,.22,dark,Math.sign(x)*.15,y,z).rotation.z = Math.PI/2;
+      const port = cylinder(plate,.19,.22,dark,Math.sign(x)*.15,y,z);
+      port.rotation.z = Math.PI/2;
+      port.userData.component = 'ports';
     }
     move.push({ object:plate,x,offset });
   }
   endPlate(-.69,-1.55);
   endPlate(.69,1.55);
-  for (const y of [.4,2.66]) for (const z of [-.78,.78]) cylinder(regen,.045,4.6,steel,0,y,z).rotation.z = Math.PI/2;
+  for (const y of [.4,2.66]) for (const z of [-.78,.78]) {
+    const bolt = cylinder(regen,.045,4.6,steel,0,y,z);
+    bolt.rotation.z = Math.PI/2;
+    bolt.userData.component = 'bolts';
+  }
   const channelFlows = [];
   for (let i = 0; i < 9; i++) {
     const plate = new T.Group();
     regen.add(plate);
-    box(plate,[.046,1.93,1.42],i%2 ? steel : dark,0,1.46,0);
+    box(plate,[.046,1.93,1.42],i%2 ? steel : dark,0,1.46,0).userData.component = 'plates';
+    for (const y of [.52,2.4]) {
+      box(plate,[.064,.035,1.41],base,0,y,0).userData.component = 'gaskets';
+    }
+    for (const z of [-.69,.69]) {
+      box(plate,[.064,1.86,.035],base,0,1.46,z).userData.component = 'gaskets';
+    }
     for (let rib = 0; rib < 7; rib++) {
-      box(plate,[.06,.035,.99],steel,0,.83 + rib*.19,0).rotation.x = rib%2 ? .29 : -.29;
+      const corrugation = box(plate,[.06,.035,.99],steel,0,.83 + rib*.19,0);
+      corrugation.rotation.x = rib%2 ? .29 : -.29;
+      corrugation.userData.component = 'plates';
     }
     const channel = sphere(regen,.078,i%2 ? cyan : amber,0,0,0);
+    channel.userData.component = 'channels';
     channelFlows.push(channel);
     move.push({ object:plate,x:(i-4)*.128,offset:(i-4)*.36 });
   }
@@ -189,10 +204,12 @@ export function createPlant(host, select) {
     if (!pressed || Math.hypot(e.clientX-pressed[0],e.clientY-pressed[1]) > 6) return;
     const rect = renderer.domElement.getBoundingClientRect();
     ray.setFromCamera(new T.Vector2((e.clientX-rect.left)/rect.width*2-1,1-(e.clientY-rect.top)/rect.height*2),camera);
-    const hits = ray.intersectObjects(Object.values(equipment).filter(g => g.visible),true);
+    const hits = ray.intersectObjects(Object.values(equipment).filter(g => g.visible),true)
+      .filter(hit => hit.object.visible);
     let object = hits[0]?.object;
+    const component = object?.userData.component;
     while (object && !object.userData.key) object = object.parent;
-    if (object) select(object.userData.key);
+    if (object) select(object.userData.key,component);
   });
   function resize() {
     const w = host.clientWidth, h = host.clientHeight;
