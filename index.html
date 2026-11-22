@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Planta virtual de pasteurización HTST con simulación térmica y evaluación económica.">
+  <title>Planta virtual HTST · Operaciones unitarias</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="top"><a class="brand" href="#inicio"><span>◈</span> PLANTA HTST</a><nav aria-label="Secciones"><a href="#planta">Planta</a><a href="#simulador">Simulador</a><a href="#graficos">Análisis</a><a href="#metodo">Metodología</a></nav></header>
+  <main id="inicio">
+    <div class="intro"><p class="eyebrow">OPERACIONES Y PROCESOS UNITARIOS</p><h1>Planta virtual de<br>pasteurización HTST</h1><p>Explora cómo un intercambiador de placas recupera calor de la leche pasteurizada y reduce el consumo de la planta.</p></div>
+    <div id="metrics" class="metrics" aria-label="Indicadores principales"></div>
+    <section id="planta" class="panel">
+      <div class="section-head"><div><p class="eyebrow">MODELO INTERACTIVO</p><h2>Recorrido de la leche</h2></div><div class="actions"><button id="run" class="primary">Iniciar simulación</button><button id="reset">Reiniciar</button></div></div>
+      <div class="toolbar"><label>Configuración <select id="config"><option value="regen">Con regeneración</option><option value="base">Convencional</option></select></label><button id="explode" aria-pressed="false" disabled>Separar placas</button><button id="camera" disabled>Restablecer cámara</button><button id="divert" aria-pressed="false">Forzar desvío</button></div>
+      <div class="plant-grid"><div id="viewport" aria-label="Maqueta tridimensional de la planta"><p id="scene-status" role="status">Cargando modelo 3D…</p></div><aside class="equipment"><label for="equipment">Inspeccionar equipo</label><select id="equipment"></select><div id="equipment-data"></div></aside></div>
+      <div class="legend"><span class="cold">Leche fría</span><span class="hot">Leche caliente</span><span class="return">Retorno de desvío</span></div>
+      <div id="route" class="route" aria-label="Esquema del proceso"></div>
+      <p id="process-status" role="status"></p>
+    </section>
+    <section id="simulador" class="panel"><div class="section-head"><div><p class="eyebrow">BALANCE DE ENERGÍA</p><h2>Simulador y dimensionamiento</h2></div><button id="csv">Exportar CSV</button></div>
+      <form id="inputs"><div class="toolbar"><label>Modo <select name="mode"><option value="design">Efectividad objetivo</option><option value="area">Área fija</option></select></label><div id="presets" class="actions" aria-label="Escenarios de diseño"></div></div><div id="process-fields" class="fields"></div><details><summary>Parámetros económicos, ambientales e hidráulicos</summary><p class="muted">Los valores iniciales son ilustrativos y editables. Sustitúyelos por los de tu informe.</p><div id="utility-fields" class="fields"></div></details><button class="primary" type="submit">Calcular</button><p id="error" role="alert"></p></form>
+    </section>
+    <section id="graficos" class="panel"><div class="section-head"><div><p class="eyebrow">COMPARACIÓN DE ESCENARIOS</p><h2>Gráficos y evaluación</h2></div></div><div class="charts">
+      <article><h3>Cargas térmicas</h3><canvas id="loads" aria-label="Comparación de cargas térmicas" role="img"></canvas></article>
+      <article><h3>Energía anual comprada</h3><canvas id="energy" aria-label="Comparación de energía anual" role="img"></canvas></article>
+      <article><h3>Balance económico anual</h3><canvas id="savings" aria-label="Ahorros y mantenimiento" role="img"></canvas></article>
+      <article><h3>Emisiones operativas</h3><canvas id="emissions" aria-label="Comparación de emisiones" role="img"></canvas></article>
+      <article class="wide"><h3>Sensibilidad de diseño · 80 %, 85 % y 90 %</h3><canvas id="sensitivity" aria-label="Sensibilidad de recuperación y área" role="img"></canvas><div class="table-scroll"><table id="scenarios"></table></div></article>
+    </div><h3>Resumen técnico, económico y ambiental</h3><div class="table-scroll"><table id="results"></table></div><p id="estimate-note" class="muted"></p></section>
+    <section id="metodo" class="panel"><p class="eyebrow">BASE DEL MODELO</p><h2>Metodología</h2>
+      <p>El problema es la demanda simultánea de calor y refrigeración. El objetivo es estimar cómo disminuyen ambas al transferir energía entre las dos corrientes de leche separadas por placas.</p>
+      <dl class="formulas">
+        <dt>Balance de materia y energía</dt><dd>ṁ = ρV̇. C = ṁ cₚ. Q total = C(T HTST − T entrada). Q recuperado = εQ total. El calentador aporta la diferencia. El enfriador retira C(T lado caliente − T final), con un mínimo de cero.</dd>
+        <dt>Intercambiador en contracorriente</dt><dd>Con caudales y propiedades iguales, ε = NTU/(1 + NTU) y NTU = UA/C, usando U y C en unidades coherentes. En diseño, A = Cε/[U(1 − ε)]. Se supone estado estacionario, U constante y pérdidas de calor despreciables.</dd>
+        <dt>Bombeo y retención</dt><dd>P = V̇ΔP/η. Las pérdidas de presión son entradas independientes. La residencia nominal es volumen útil dividido por caudal. La válvula retorna al tanque cuando el modelo marca menos de 72 °C o 15 s, o al activar el desvío manual.</dd>
+        <dt>Costos y emisiones</dt><dd>Gas anual = carga térmica × horas / rendimiento del generador. Electricidad anual = (enfriamiento × fracción frigorífica / COP + bombeo) × horas. El informe calcula el bombeo incremental de la regeneración. Introduce la caída base si la conoces. Ahorro neto = ahorro de gas + ahorro eléctrico − mantenimiento incremental. ROI anual = ahorro neto / inversión. Retorno simple = 12 × inversión / ahorro neto. Las emisiones usan factores editables por kWh comprado.</dd>
+      </dl>
+      <p>El modelo térmico describe el régimen nominal hacia almacenamiento. Durante el desvío, la animación muestra el retorno al tanque y las proyecciones conservan el balance del caso nominal. La geometría es ilustrativa. La validación sanitaria, la distribución real de tiempos y el dimensionamiento definitivo requieren datos de planta y del fabricante.</p>
+      <p>Bibliografía · <a href="https://dairyprocessinghandbook.tetrapak.com/chapter/heat-exchangers">Intercambiadores de calor</a> y <a href="https://dairyprocessinghandbook.tetrapak.com/chapter/designing-process-line">Diseño de líneas de proceso</a>, Dairy Processing Handbook, Tetra Pak.</p>
+    </section>
+  </main>
+  <footer>Proyecto final · Operaciones y Procesos Unitarios</footer>
+</body>
+</html>
