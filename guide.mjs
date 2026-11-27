@@ -33,6 +33,11 @@ guideStyle.textContent = `
   .guide-results dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.75rem;margin:0}
   .guide-results dt{color:var(--muted);font-size:.85rem}
   .guide-results dd{margin:.22rem 0 0;font-weight:800;font-size:1.2rem}
+  .guided-example{border:1px solid var(--hair);border-radius:9px;padding:.85rem 1rem;margin:1rem 0;background:#f8fcfb}
+  .guided-example summary{margin:0}
+  .guided-example[open] summary{margin-bottom:.7rem}
+  .guided-example table td,.guided-example table th{white-space:normal}
+  .guided-example .exercise-note{margin:.75rem 0;color:var(--muted);line-height:1.5}
   #laboratorio .charts,#graficos .charts{display:block}
   #graficos .charts canvas{max-height:270px}
   #results th{white-space:normal}
@@ -199,6 +204,67 @@ updateResultSummary();
 const resultObserver = new MutationObserver(updateResultSummary);
 resultObserver.observe(get('results'),{childList:true});
 resultObserver.observe(get('csv'),{attributes:true,attributeFilter:['disabled']});
+
+const exercise = document.createElement('details');
+exercise.className = 'guided-example';
+exercise.innerHTML = `
+  <summary>Práctica guiada · ¿qué cambia de 85 % a 90 %?</summary>
+  <p>Piensa qué pasará con el aporte del calentador y el tamaño del intercambiador. Luego revela la comparación.</p>
+  <button type="button" class="exercise-reveal" aria-expanded="false" aria-controls="exercise-answer">Revelar comparación</button>
+  <div id="exercise-answer" hidden>
+    <div class="table-scroll"><table>
+      <thead><tr><th scope="col">Qué estamos comparando</th><th scope="col">85 %</th><th scope="col">90 %</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="exercise-note">Al recuperar más calor, el calentador aporta menos. La diferencia de temperatura entre las corrientes también se reduce, por lo que se necesita más superficie de placas para transferir ese calor.</p>
+    <p class="exercise-note">La tabla usa el caudal, las temperaturas y las propiedades actuales. Los dos casos calculan el área necesaria para alcanzar su porcentaje objetivo.</p>
+    <button type="button" class="exercise-apply">Aplicar 90 % al simulador</button>
+    <span class="exercise-status" role="status"></span>
+  </div>`;
+get('simulador').querySelector('.guide-tip').after(exercise);
+const answer = get('exercise-answer');
+const reveal = exercise.querySelector('.exercise-reveal');
+const apply = exercise.querySelector('.exercise-apply');
+const exerciseStatus = exercise.querySelector('.exercise-status');
+const practiceRows = [
+  ['Precalentamiento (°C)','Temperatura antes del calentador','°C'],
+  ['Recuperación (kW)','Calor transferido entre las dos corrientes','kW'],
+  ['Calentamiento externo (kW)','Potencia que todavía aporta el calentador','kW'],
+  ['Área (m²)','Superficie de placas necesaria','m²'],
+];
+function updateExercise() {
+  const body = exercise.querySelector('tbody');
+  body.replaceChildren();
+  apply.disabled = get('csv').disabled;
+  if (apply.disabled) {
+    exerciseStatus.textContent = ' Corrige los datos para comparar.';
+    return;
+  }
+  const rows = new Map([...get('scenarios').querySelectorAll('tbody tr')].map(row =>
+    [row.cells[0].textContent,row.cells]));
+  for (const [key,label,unit] of practiceRows) {
+    const cells = rows.get(key);
+    if (!cells) continue;
+    const row = body.insertRow();
+    const name = document.createElement('th');
+    name.scope = 'row';
+    name.textContent = label;
+    row.append(name);
+    for (const index of [2,3]) row.insertCell().textContent = cells[index].textContent + ' ' + unit;
+  }
+  const preset = get('presets').querySelector('[data-eff="90"]');
+  exerciseStatus.textContent = preset?.getAttribute('aria-pressed') === 'true' ? ' Escenario del 90 % activo.' : '';
+}
+reveal.addEventListener('click', () => {
+  answer.hidden = !answer.hidden;
+  reveal.setAttribute('aria-expanded',String(!answer.hidden));
+  reveal.textContent = answer.hidden ? 'Revelar comparación' : 'Ocultar comparación';
+  if (!answer.hidden) updateExercise();
+});
+apply.addEventListener('click', () => get('presets').querySelector('[data-eff="90"]').click());
+const exerciseObserver = new MutationObserver(() => { if (!answer.hidden) updateExercise(); });
+exerciseObserver.observe(get('scenarios'),{childList:true});
+exerciseObserver.observe(get('csv'),{attributes:true,attributeFilter:['disabled']});
 
 const explanations = {
   'Estados de operación':'Distingue producción normal, retorno por desvío y demostraciones de preparación o limpieza.',
