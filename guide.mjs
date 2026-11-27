@@ -1,6 +1,7 @@
 const descriptions = {
   planta: ['Planta 3D', 'Sigue el recorrido de la leche desde el tanque hasta el almacenamiento. Pulsa Iniciar simulación y elige un equipo para ver qué hace y a qué temperatura opera.'],
   simulador: ['Ajustar el proceso', 'Cambia el caudal, la temperatura o la recuperación y compara lo que ocurre. Puedes empezar con los valores iniciales del proyecto.'],
+  balances: ['Balances', 'Sigue las corrientes numeradas para ver por dónde entra, sale o retorna la leche. La flecha vertical del regenerador muestra el calor que pasa de una corriente a la otra.'],
   laboratorio: ['Aprender con experimentos', 'Abre un ejercicio para probar una variable y ver su efecto. Empieza por el intercambiador si quieres entender de dónde sale el calor recuperado.'],
   graficos: ['Comparar resultados', 'La tabla compara la misma planta en dos configuraciones. Abre un gráfico si quieres ver de dónde vienen las diferencias de energía, costos o emisiones.'],
   auditoria: ['Verificar los cálculos', 'La auditoría comprueba que los balances del modelo cierren. El residuo es la diferencia entre dos formas de calcular lo mismo. Un valor cercano a cero indica que coinciden dentro de la tolerancia del programa.'],
@@ -38,6 +39,7 @@ guideStyle.textContent = `
   .guided-example[open] summary{margin-bottom:.7rem}
   .guided-example table td,.guided-example table th{white-space:normal}
   .guided-example .exercise-note{margin:.75rem 0;color:var(--muted);line-height:1.5}
+  #balance-figure>svg,#balance-figure>img{display:block;width:100%;height:auto}
   #laboratorio .charts,#graficos .charts{display:block}
   #graficos .charts canvas{max-height:270px}
   #results th{white-space:normal}
@@ -49,6 +51,11 @@ document.head.append(guideStyle);
 
 const get = id => document.getElementById(id);
 const nav = document.querySelector('.top nav');
+const balanceSection = document.createElement('section');
+balanceSection.id = 'balances';
+balanceSection.className = 'panel';
+balanceSection.innerHTML = '<h2>Balances de materia y energía</h2>';
+get('simulador').after(balanceSection);
 const tabs = Object.keys(descriptions).map(get).filter(Boolean);
 const intro = document.querySelector('.intro');
 const metrics = get('metrics');
@@ -84,7 +91,8 @@ for (const section of tabs) {
   let link = nav.querySelector('a[href="#'+section.id+'"]');
   if (!link) {
     link = linkTo(section.id,label);
-    nav.append(link);
+    if (section.id === 'balances') nav.querySelector('a[href="#simulador"]').after(link);
+    else nav.append(link);
   }
   link.textContent = label;
   const heading = section.querySelector('h2');
@@ -99,8 +107,8 @@ function addNext(section, links) {
   for (const [id,text] of links) actions.append(linkTo(id,text));
   get(section).append(actions);
 }
-addNext('planta',[['simulador','Cambiar las condiciones']]);
-addNext('simulador',[['graficos','Ver la comparación'],['planta','Ver el cambio en la planta']]);
+addNext('planta',[['simulador','Cambiar las condiciones'],['balances','Ver balances']]);
+addNext('simulador',[['balances','Ver balances'],['graficos','Ver la comparación'],['planta','Ver el cambio en la planta']]);
 addNext('laboratorio',[['simulador','Volver a los ajustes'],['metodo','Consultar las fórmulas']]);
 addNext('graficos',[['simulador','Ajustar el escenario'],['auditoria','Comprobar los balances']]);
 
@@ -111,14 +119,66 @@ addTip(get('simulador').querySelector('form'),'¿Qué modo elijo?',
 addTip(get('auditoria') ?? get('metodo'),'¿Qué se verifica y qué requiere medir?',
   'El programa verifica la coherencia de las ecuaciones y compara el calor calculado por dos métodos. La inversión requiere una cotización y la retención real y la seguridad sanitaria deben verificarse en planta.', 'beforeend');
 
-const balanceDiagrams = document.createElement('details');
-balanceDiagrams.className = 'guide-group';
-balanceDiagrams.innerHTML = '<summary>Diagramas clásicos de balance</summary>' +
-  '<p>Los recuadros representan equipos. Las flechas numeradas muestran las corrientes y la flecha vertical del regenerador indica el calor transferido.</p>' +
-  '<a href="./balances.svg"><img src="./balances.svg" alt="Balances de materia y energía del escenario base HTST" width="920" height="756" style="display:block;width:100%;height:auto"></a>' +
-  '<p><a href="./balances.svg" download>Descargar los diagramas en SVG</a></p>';
-balanceDiagrams.id = 'diagramas';
-get('planta').append(balanceDiagrams);
+const balanceDiagrams = document.createElement('div');
+balanceDiagrams.innerHTML =
+  '<p>Los diagramas se actualizan al cambiar el escenario o la ruta.</p>' +
+  '<p class="balance-warning" role="status" hidden>Corrige los valores en Ajustar el proceso. Se muestra el último cálculo válido.</p>' +
+  '<div id="balance-figure"><img src="./balances.svg?v=simulable" alt="Diagramas HTST del caso base" width="920" height="756"></div>' +
+  '<div class="guide-next"><a href="#simulador">Cambiar caudal, temperaturas o recuperación</a><a href="./balances.svg?v=simulable" download="balances.svg">Descargar figura del caso base</a></div>';
+balanceSection.append(balanceDiagrams);
+const balanceFigure = get('balance-figure');
+function updateBalances() {
+  const svg = balanceFigure.querySelector('svg');
+  if (!svg) return;
+  const invalid = get('csv').disabled;
+  balanceDiagrams.querySelector('.balance-warning').hidden = !invalid;
+  if (invalid) return;
+  const fields = get('inputs').elements;
+  const conventional = get('config').value === 'base';
+  const diverted = get('divert').getAttribute('aria-pressed') === 'true' ||
+    /desvío automático/i.test(get('process-status').textContent);
+  const values = new Map([...get('results').querySelectorAll('tbody tr')].map(row =>
+    [row.cells[0].textContent,row.cells[conventional ? 1 : 2].textContent]));
+  const format = (name,precision = 2) => fields.namedItem(name).valueAsNumber.toLocaleString('es-ES',{maximumFractionDigits:precision});
+  const set = (id,text) => { svg.querySelector('#'+id).textContent = text; };
+  const emphasis = (id,active) => svg.querySelector('#'+id).setAttribute('opacity',active ? '1' : '.24');
+  const mass = (fields.flow.valueAsNumber*fields.density.valueAsNumber/1000).toLocaleString('es-ES',{maximumFractionDigits:2});
+  set('balance-flow','Caudal de alimentación: '+format('flow')+' L/h · '+(diverted ? 'ruta de desvío' : 'ruta de producción'));
+  set('balance-inlet','Entrada · '+format('inlet')+' °C');
+  const outlet = get('route').querySelector('button:last-of-type')?.textContent.split(' · ').at(-1);
+  set('balance-outlet',diverted ? 'Salida al almacén cerrada' : 'Al almacén · '+outlet);
+  set('balance-mass',diverted ? 'Desvío activo: ṁ₃ = '+mass+' kg/h en la línea simulada · ṁ₂ = 0.' :
+    'Producción normal: ṁ₁ = ṁ₂ = '+mass+' kg/h.');
+  emphasis('balance-main-line',!diverted);
+  emphasis('balance-out-line',!diverted);
+  emphasis('balance-return-line',diverted);
+  for (const id of ['balance-cold-line','balance-hot-line','balance-heat-line']) emphasis(id,!conventional);
+  set('balance-energy-status',conventional ? 'Línea convencional · regenerador fuera de servicio' :
+    'Regeneración: '+metrics.querySelectorAll('article b')[1]?.textContent+' % · '+(diverted ? 'balance nominal para diseño' : 'corrientes en contracorriente'));
+  set('balance-cold-in','1 · Leche cruda · '+(conventional ? '—' : format('inlet')+' °C'));
+  set('balance-cold-out','2 · Precalentada · '+(conventional ? '—' : values.get('Precalentamiento (°C)')+' °C'));
+  set('balance-hot-in','3 · Pasteurizada · '+(conventional ? '—' : format('hot')+' °C'));
+  set('balance-hot-out','4 · Preenfriada · '+(conventional ? '—' : values.get('Salida antes del enfriador (°C)')+' °C'));
+  set('balance-recovered','Calor transferido a través de las placas: '+values.get('Calor recuperado (kW)')+' kW.');
+  set('balance-utilities','Calentador: aporta '+values.get('Calentamiento externo (kW)')+
+    ' kW · enfriador final: retira '+values.get('Enfriamiento restante (kW)')+' kW.');
+}
+const balanceObserver = new MutationObserver(updateBalances);
+for (const id of ['results','process-status']) balanceObserver.observe(get(id),{childList:true});
+balanceObserver.observe(get('csv'),{attributes:true,attributeFilter:['disabled']});
+fetch('./balances.svg?v=simulable').then(response => {
+  if (!response.ok) throw new Error('Diagrama no disponible');
+  return response.text();
+}).then(source => {
+  const svg = new DOMParser().parseFromString(source,'image/svg+xml').documentElement;
+  if (svg.localName !== 'svg' || !svg.querySelector('#balance-flow')) throw new Error('Diagrama incompatible');
+  balanceFigure.replaceChildren(document.importNode(svg,true));
+  updateBalances();
+}).catch(() => {
+  const status = balanceDiagrams.querySelector('.balance-warning');
+  status.textContent = 'La vista interactiva no cargó. La imagen muestra el caso base.';
+  status.hidden = false;
+});
 
 const inputHelp = {
   flow:'Litros que ingresan cada hora. Más caudal reduce el tiempo que cada porción pasa en el tubo de retención.',
