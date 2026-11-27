@@ -111,6 +111,15 @@ addTip(get('simulador').querySelector('form'),'¿Qué modo elijo?',
 addTip(get('auditoria') ?? get('metodo'),'¿Qué se verifica y qué requiere medir?',
   'El programa verifica la coherencia de las ecuaciones y compara el calor calculado por dos métodos. La inversión requiere una cotización y la retención real y la seguridad sanitaria deben verificarse en planta.', 'beforeend');
 
+const balanceDiagrams = document.createElement('details');
+balanceDiagrams.className = 'guide-group';
+balanceDiagrams.innerHTML = '<summary>Diagramas clásicos de balance</summary>' +
+  '<p>Los recuadros representan equipos. Las flechas numeradas muestran las corrientes y la flecha vertical del regenerador indica el calor transferido.</p>' +
+  '<a href="./balances.svg"><img src="./balances.svg" alt="Balances de materia y energía del escenario base HTST" width="920" height="756" style="display:block;width:100%;height:auto"></a>' +
+  '<p><a href="./balances.svg" download>Descargar los diagramas en SVG</a></p>';
+balanceDiagrams.id = 'diagramas';
+get('planta').append(balanceDiagrams);
+
 const inputHelp = {
   flow:'Litros que ingresan cada hora. Más caudal reduce el tiempo que cada porción pasa en el tubo de retención.',
   inlet:'Temperatura de la leche al llegar al tanque.',
